@@ -156,12 +156,15 @@ defmodule ExMarc do
       fields_raw
       #|> Enum.map(&Task.async(fn -> _parse_field(&1, fields_data, indicator_count, identifier_data_length) end))
       #|> Enum.map(&Task.await(&1))
-      |> Enum.map(fn ({field_tag, field_data}) ->
-        spawn_link fn -> (send me, {self(), {field_tag, parse_bibliographic_field_data(field_data, indicator_count, identifier_data_length)}}) end
-      end)
-      |> Enum.map(fn (pid) ->
-        receive do { ^pid, field } -> field end
-      end)
+      # ---
+      #|> Enum.map(fn ({field_tag, field_data}) ->
+      #  spawn_link fn -> (send me, {self(), {field_tag, parse_bibliographic_field_data(field_data, indicator_count, identifier_data_length)}}) end
+      #end)
+      #|> Enum.map(fn (pid) ->
+      #   receive do { ^pid, field } -> field end
+      #end)
+      # ---
+      |> Enum.map(fn ({field_tag, field_data}) -> {field_tag, parse_bibliographic_field_data(field_data, indicator_count, identifier_data_length)} end)
     end
 
     # TODO: rename to decode
