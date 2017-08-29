@@ -1,4 +1,4 @@
-defmodule Exmarc.Mixfile do
+defmodule ExMarc.Mixfile do
   use Mix.Project
 
   def project do
@@ -7,7 +7,13 @@ defmodule Exmarc.Mixfile do
      elixir: "~> 1.4",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
-     deps: deps()]
+     deps: deps(),
+     escript: escript()
+    ]
+  end
+
+  def escript do
+    [main_module: ExMarc.CLI]
   end
 
   # Configuration for the OTP application
@@ -15,7 +21,8 @@ defmodule Exmarc.Mixfile do
   # Type "mix help compile.app" for more information
   def application do
     # Specify extra applications you'll use from Erlang/Elixir
-    [extra_applications: [:logger, :fast_xml]]
+    #[extra_applications: [:logger, :fast_xml]]
+    [extra_applications: [:logger]]
   end
 
   # Dependencies can be Hex packages:
@@ -28,6 +35,7 @@ defmodule Exmarc.Mixfile do
   #
   # Type "mix help deps" for more examples and options
   defp deps do
-    [{:fast_xml, github: "processone/fast_xml"}]
+    #[{:fast_xml, github: "processone/fast_xml"}]
+    []
   end
 end

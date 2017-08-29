@@ -84,7 +84,8 @@ defmodule ExMarc do
         {field_tag, String.to_integer(field_length), String.to_integer(starting_char_pos)}
       end
       fields_raw = for {field_tag, field_length, starting_char_pos} <- directory_entries do
-        field_tag = to_charlist(field_tag)
+        field_tag = to_charlist(:binary.copy(field_tag))
+        #field_tag = to_charlist(field_tag)
         field_data_length = field_length - 1
         <<
           _ :: binary-size(starting_char_pos),
@@ -92,11 +93,20 @@ defmodule ExMarc do
           @field_terminator,
           _ :: binary
         >> = fields_data
-        {field_tag, field_data}
+        {field_tag, :binary.copy(field_data)}
+        #{field_tag, field_data}
       end
       # TODO: attribute for '00Z'
       # TODO: try reverse
-      {control_fields, bibliographic_fields_raw} = Enum.split_while(fields_raw, fn({field_tag, _}) -> field_tag <= '00Z' end)
+      #
+      #{control_fields, bibliographic_fields_raw} = Enum.split_while(fields_raw, fn({field_tag, _}) -> field_tag <= '00Z' end)
+      # TODO: {field_tag, field_data} = field should work, try out
+      #{control_fields, bibliographic_fields_raw} = Enum.reduce(fields_raw, {[], []}, fn
+      #  {field_tag, field_data}, {c_fields, bib_fields} when field_tag > '00Z' -> {c_fields, [{field_tag, field_data} | bib_fields]}
+      #  field, {c_fields, bib_fields} -> {[field | c_fields], bib_fields}
+      #end)
+      {bibliographic_fields_raw, control_fields} = Enum.split_with(fields_raw, fn({field_tag, _}) -> field_tag > '00Z' end)
+
       bibliographic_fields = decode_raw_bibliographic_fields(bibliographic_fields_raw, indicator_count, identifier_length)
       {leader, control_fields, bibliographic_fields, nil}
     end
@@ -154,6 +164,7 @@ defmodule ExMarc do
       end)
     end
 
+    # TODO: rename to decode
     defp parse_bibliographic_field_data(
       field_data,
       indicator_count,
