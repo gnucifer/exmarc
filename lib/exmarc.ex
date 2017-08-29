@@ -23,12 +23,6 @@ defmodule ExMarc do
       Decode an iso2709 encoded binary into Elixir representation
     ## Examples
     """
-    # @spec decode(IO.Stream.t) :: records
-    # def file_stream_decode(filename) do
-    #  filename
-    #  |> File.stream!(read_ahead: 10_000_000, line_or_bytes: 2048) # TODO: Try varying this
-    #  |> extract_records
-    #end
 
     def file_decode(path) do
       {:ok, file} = File.open(path, [:read, :binary, {:read_ahead, 64_000_000}])
@@ -40,13 +34,6 @@ defmodule ExMarc do
       :ok = File.close(file)
       records
     end
-
-    #def decode_records(records) do
-    #  _decode_records(records, [])
-    #end
-
-    #defp _decode_records([record | records], records_decoded) do
-    #end
 
     def decode_raw_record({leader, directory_data, fields_data}) do
       <<
@@ -63,16 +50,7 @@ defmodule ExMarc do
       length_of_starting_char_pos = String.to_integer(length_of_starting_char_pos)
       indicator_count = String.to_integer(indicator_count)
       identifier_length = String.to_integer(identifier_length)
-      #<<
-      #  directory :: binary-size(directory_data_length),
-      #  @field_terminator,
-      #  fields_data :: binary-size(fields_data_length),
-      #  wut :: binary
-      #>> = record_body
 
-      # Extract this earlier?
-      #<<directory :: binary-size(directory_data_length), @field_terminator, rest :: binary>> = record_body
-      #<<fields :: binary-size(fields_data_length), @record_terminator>> = rest
       #directory_entries = parse_directory(directory, length_of_field_length, length_of_starting_char_pos)
       directory_entries = for <<entry :: binary-size(@directory_entry_length) <- directory_data>> do
         <<
@@ -96,17 +74,14 @@ defmodule ExMarc do
         {field_tag, :binary.copy(field_data)}
         #{field_tag, field_data}
       end
-      # TODO: attribute for '00Z'
-      # TODO: try reverse
-      #
+
+      # TODO: attribute for '00Z'?
       #{control_fields, bibliographic_fields_raw} = Enum.split_while(fields_raw, fn({field_tag, _}) -> field_tag <= '00Z' end)
-      # TODO: {field_tag, field_data} = field should work, try out
       #{control_fields, bibliographic_fields_raw} = Enum.reduce(fields_raw, {[], []}, fn
-      #  {field_tag, field_data}, {c_fields, bib_fields} when field_tag > '00Z' -> {c_fields, [{field_tag, field_data} | bib_fields]}
+      #  {field_tag, field_data} = field, {c_fields, bib_fields} when field_tag > '00Z' -> {c_fields, [field | bib_fields]}
       #  field, {c_fields, bib_fields} -> {[field | c_fields], bib_fields}
       #end)
       {bibliographic_fields_raw, control_fields} = Enum.split_with(fields_raw, fn({field_tag, _}) -> field_tag > '00Z' end)
-
       bibliographic_fields = decode_raw_bibliographic_fields(bibliographic_fields_raw, indicator_count, identifier_length)
       {leader, control_fields, bibliographic_fields, nil}
     end
@@ -144,7 +119,6 @@ defmodule ExMarc do
       end
     end
 
-    # Does the one extra function call matters performance-wise?
     defp decode_raw_bibliographic_fields(
       fields_raw,
       indicator_count,
