@@ -35,6 +35,39 @@ defmodule ExMarc do
       records
     end
 
+    def extract_records(device) do
+      _extract_records(device, [])
+    end
+
+    defp _extract_records(device, records) do
+      case IO.binread(device, 24) do
+        :eof ->
+          records
+        <<leader :: binary-size(@leader_length)>> -> # Rename to header?
+          <<
+            record_length :: binary-size(5), #attribute?
+            _ :: binary-size(7),
+            base_address_of_data :: binary-size(5),
+            _ :: binary
+            >> = leader
+          #- 1 because record terminator is included in record_length,
+          # but we don't want to include the terminator in the field data
+          record_length = String.to_integer(record_length)
+          base_address_of_data = String.to_integer(base_address_of_data)
+          fields_data_length = record_length - base_address_of_data - 1
+          directory_data_length = base_address_of_data - @leader_length - 1
+          <<
+            directory :: binary-size(directory_data_length),
+            @field_terminator, # Marks end of directory
+            fields_data :: binary-size(fields_data_length),
+            @record_terminator
+          >> = IO.binread(device, record_length - @leader_length)
+          _extract_records(device, [{leader, directory, fields_data} | records])
+        _ ->
+          :error #TODO: What to do?
+      end
+    end
+
     def decode_raw_record({leader, directory_data, fields_data}) do
       <<
         _ :: binary-size(10), #attribute?
@@ -84,39 +117,6 @@ defmodule ExMarc do
       {bibliographic_fields_raw, control_fields} = Enum.split_with(fields_raw, fn({field_tag, _}) -> field_tag > '00Z' end)
       bibliographic_fields = decode_raw_bibliographic_fields(bibliographic_fields_raw, indicator_count, identifier_length)
       {leader, control_fields, bibliographic_fields, nil}
-    end
-
-    def extract_records(device) do
-      _extract_records(device, [])
-    end
-
-    defp _extract_records(device, records) do
-      case IO.binread(device, 24) do
-        :eof ->
-          records
-        <<leader :: binary-size(@leader_length)>> -> # Rename to header?
-          <<
-            record_length :: binary-size(5), #attribute?
-            _ :: binary-size(7),
-            base_address_of_data :: binary-size(5),
-            _ :: binary
-            >> = leader
-          #- 1 because record terminator is included in record_length,
-          # but we don't want to include the terminator in the field data
-          record_length = String.to_integer(record_length)
-          base_address_of_data = String.to_integer(base_address_of_data)
-          fields_data_length = record_length - base_address_of_data - 1
-          directory_data_length = base_address_of_data - @leader_length - 1
-          <<
-            directory :: binary-size(directory_data_length),
-            @field_terminator, # Marks end of directory
-            fields_data :: binary-size(fields_data_length),
-            @record_terminator
-          >> = IO.binread(device, record_length - @leader_length)
-          _extract_records(device, [{leader, directory, fields_data} | records])
-        _ ->
-          :error #TODO: What to do?
-      end
     end
 
     defp decode_raw_bibliographic_fields(
