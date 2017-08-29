@@ -152,7 +152,6 @@ defmodule ExMarc do
         splittable_identifiers_data |> String.splitter(@identifier_separator),
         #splittable_identifiers_data |> String.split(@identifier_separator),
         do: {identifier, value}
-      {:ok, indicators_data, identifiers}
       {indicators_data, identifiers}
     end
 
