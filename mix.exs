@@ -22,7 +22,7 @@ defmodule ExMarc.Mixfile do
   def application do
     # Specify extra applications you'll use from Erlang/Elixir
     #[extra_applications: [:logger, :fast_xml]]
-    [extra_applications: [:logger]]
+    [extra_applications: [:logger, :gen_stage]]
   end
 
   # Dependencies can be Hex packages:
@@ -36,6 +36,6 @@ defmodule ExMarc.Mixfile do
   # Type "mix help deps" for more examples and options
   defp deps do
     #[{:fast_xml, github: "processone/fast_xml"}]
-    []
+    [{:gen_stage, "~> 0.12.2"}]
   end
 end
