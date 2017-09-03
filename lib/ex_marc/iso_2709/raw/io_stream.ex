@@ -1,26 +1,28 @@
-defmodule ExMarc.ISO2709.Stream do
+defmodule ExMarc.ISO2709.Raw.IOStream do
   # Other possible properties?
   @enforce_keys :device
-  defstruct device: nil
+  defstruct [:device]
 
   @type t :: %__MODULE__{}
 
   @doc false
   def __build__(device) do
-    %ExMarc.ISO2709.Stream{device: device}
+    %ExMarc.ISO2709.Raw.IOStream{device: device}
   end
 
   defimpl Enumerable do
-    # Implementation using Stream.resource
+    # Implementation using IOStream.resource
     def reduce(%{device: device}, acc, fun) do
       next_fun = fn device ->
-        case ExMarc.ISO2709.read_raw_record(device) do
+        case ExMarc.ISO2709.Raw.read_record(device) do
           :eof ->
             {:halt, device} # Or done?
           {:error, reason} ->
             # TODO: Error module
-            #raise ExMarc.ISO2709.StreamError, reason: reason #?
+            #raise ExMarc.ISO2709.IOStreamError, reason: reason #?
             raise reason
+          #TODO: separate case/function for handling errors?
+          #record -> {[ExMarc.ISO2709.decode_raw_record(record)], device}
           record -> {[record], device}
         end
       end
@@ -28,10 +30,11 @@ defmodule ExMarc.ISO2709.Stream do
     end
 
     # Explicit implementation
+    # (No significant performance differance, thanks Elixir!)
     #def reduce(_, {:halt, acc}, _fun), do: {:halted, acc}
     #def reduce(stream, {:suspend, acc}, fun), do: {:suspended, acc, &reduce(stream, &1, fun)}
     #def reduce(%{device: device} = stream, {:cont, acc}, fun) do  #do: {:done, acc}
-    #  case ExMarc.ISO2709.read_raw_record(device) do
+    #  case ExMarc.ISO2709.read_record(device) do
     #    :eof ->
     #      {:done, acc}
     #    {:error, reason} ->

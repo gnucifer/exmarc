@@ -1,8 +1,6 @@
 defmodule ExMarc.ISO2709 do
-  @leader_length 24
   @field_tag_length 3
   @directory_entry_length 12
-  @record_terminator "\x1D"
   @field_terminator "\x1E" #Field terminator?
   @identifier_separator "\x1F" #identifier delimiter?
   @read_ahead_size 64 * 1024
@@ -29,8 +27,21 @@ defmodule ExMarc.ISO2709 do
     #end
   end
 
-  def file_decode(path) do
-    file = File.open!(path, [:read, :binary, {:read_ahead, @read_ahead_size}])
+  def io_stream!(device) do
+    device
+    |> ExMarc.ISO2709.Raw.io_stream!()
+    |> Stream.map(&ExMarc.ISO2709.decode_raw_record/1)
+  end
+
+  def file_stream!(path, modes \\ []) do
+    path
+    |> ExMarc.ISO2709.Raw.file_stream!(modes)
+    |> Stream.map(&ExMarc.ISO2709.decode_raw_record/1)
+  end
+
+  def file_decode!(path) do
+    # :raw?
+    file = File.open!(path, [:raw, :read, :binary, {:read_ahead, @read_ahead_size}])
     #{:ok, file} = File.open(path, [:read, :binary, :raw])
     # TODO: extract -> decode pipeline
     #me = self()
@@ -38,58 +49,10 @@ defmodule ExMarc.ISO2709 do
     #records = receive do raw_records -> (raw_records |> Enum.map(&ExMarc.ISO2709.decode_raw_record/1)) end
     # raise File.Error, reason: reaosn, action; "stream", path: path?
     records = file
-              |> read_raw_records
-    #          |> Enum.map(&ExMarc.ISO2709.decode_raw_record/1)
+              |> ExMarc.ISO2709.Raw.read_records
+              |> Enum.map(&ExMarc.ISO2709.decode_raw_record/1)
     :ok = File.close(file)
     records
-  end
-
-  def read_raw_record(device) do
-    case IO.binread(device, 24) do
-      <<leader :: binary-size(@leader_length)>> -> # Rename to header?
-        <<
-          record_length :: binary-size(5), #attribute?
-          _ :: binary-size(7),
-          base_address_of_data :: binary-size(5),
-          _ :: binary
-        >> = leader
-        #- 1 because record terminator is included in record_length,
-        # but we don't want to include the terminator in the field data
-        record_length = String.to_integer(record_length)
-        base_address_of_data = String.to_integer(base_address_of_data)
-        fields_data_length = record_length - base_address_of_data - 1
-        directory_data_length = base_address_of_data - @leader_length - 1
-        <<
-          directory :: binary-size(directory_data_length),
-          @field_terminator, # Marks end of directory
-          fields_data :: binary-size(fields_data_length),
-          @record_terminator
-        >> = IO.binread(device, record_length - @leader_length)
-        {leader, directory, fields_data}
-      :eof -> :eof #Or nil? Let call handle, result -> result
-      {:error, reason} = error -> error # Should probably throw error here instead, and less servere parsing errors should be returned
-    end
-  end
-
-  def read_raw_records(device, limit \\ -1) do
-    _read_raw_records(device, [], limit)
-  end
-
-  defp _read_raw_records(_, records, 0) do
-    records
-  end
-
-  defp _read_raw_records(device, records, limit) do
-    case read_raw_record(device) do
-      :eof ->
-        records
-      record -> # Rename to header?
-        _read_raw_records(
-          device,
-          [record | records],
-          (if limit > 0, do: limit - 1, else: limit)
-        )
-    end
   end
 
   def decode_raw_record({leader, directory_data, fields_data}) do
@@ -259,7 +222,7 @@ defmodule ExMarc.ISO2709 do
     end
 
     def handle_demand(demand, device) when demand > 0 do
-      events = ExMarc.ISO2709.read_raw_records(device, demand)
+      events = ExMarc.ISO2709.Raw.read_records(device, demand)
       # TODO: probably need halt condition here
       {:noreply, events, device}
     end
