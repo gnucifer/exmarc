@@ -21,8 +21,6 @@ defmodule ExMarc.ISO2709.Raw.IOStream do
             # TODO: Error module
             #raise ExMarc.ISO2709.IOStreamError, reason: reason #?
             raise reason
-          #TODO: separate case/function for handling errors?
-          #record -> {[ExMarc.ISO2709.decode_raw_record(record)], device}
           record -> {[record], device}
         end
       end
