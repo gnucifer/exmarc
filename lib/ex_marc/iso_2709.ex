@@ -11,7 +11,7 @@ defmodule ExMarc.ISO2709 do
   """
 
   defmodule Record do
-    @enforce_keys [:leader, :contril_fields, :bibliographic_fields]
+    @enforce_keys [:leader, :control_fields, :bibliographic_fields]
     defstruct [:leader, :control_fields, :bibliographic_fields, impl_part: nil]
 
     #defimpl Enumerable do
